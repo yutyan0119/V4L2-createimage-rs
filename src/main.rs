@@ -8,22 +8,28 @@ use std::os::unix::io::RawFd;
 
 struct Device {
     fd: RawFd,
+    is_opened: bool,
 }
 
 impl Drop for Device {
     fn drop(&mut self) {
-        unsafe { libc::close(self.fd) };
+        if self.is_opened {
+            unsafe { libc::close(self.fd) };
+        }
     }
 }
 
 struct Buffer {
     start: *mut std::ffi::c_void,
     length: u32,
+    is_mapped: bool,
 }
 
 impl Drop for Buffer {
     fn drop(&mut self) {
-        unsafe { libc::munmap(self.start, self.length as usize) };
+        if self.is_mapped {
+            unsafe { libc::munmap(self.start, self.length as usize) };
+        }
     }
 }
 
@@ -38,7 +44,7 @@ fn open_device(path: &CString) -> io::Result<Device> {
             ),
         ));
     }
-    let device: Device = Device { fd };
+    let device: Device = Device { fd , is_opened: true,};
     Ok(device)
 }
 
@@ -173,6 +179,7 @@ fn map_buffers(fd: RawFd, v4l2_reqbuf: &v4l2::v4l2_requestbuffers) -> io::Result
         let buffer: Buffer = Buffer {
             start: ptr,
             length: v4l2_buf.length,
+            is_mapped: true,
         };
         buffers.push(buffer);
     }
@@ -331,7 +338,7 @@ fn main() -> io::Result<()> {
 
     let buffers: Vec<Buffer> = map_buffers(device.fd, &v4l2_reqbuf)?;
 
-    start_streaming(device.fd)?;
+    let _ = start_streaming(device.fd)?;
 
     let data: &[u8] = capture_frame(device.fd, &buffers)?;
 

@@ -88,4 +88,3 @@ pub const V4L2_CAP_STREAMING: u32 = 0x04000000; /* Streaming I/O ioctls */
 pub fn v4l2_fourcc(a: u8, b: u8, c: u8, d: u8) -> u32 {
     (a as u32) | ((b as u32) << 8) | ((c as u32) << 16) | ((d as u32) << 24)
 }
-
